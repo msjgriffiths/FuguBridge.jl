@@ -22,7 +22,6 @@ function build(name::AbstractString; source=get(ENV,"PUFFERLIB_SOURCE",nothing),
                raylib=get(ENV, "RAYLIB_ROOT", nothing),
                compiler=get(ENV, backend isa GPU ? "NVCC" : "CC", backend isa GPU ? "nvcc" : Sys.iswindows() ? "gcc" : "cc"),
                cflags=String[], ldflags=String[], output=@get_scratch!("build"))
-    Sys.which(compiler) === nothing && throw(ArgumentError("compiler '$compiler' not found; install $(backend isa GPU ? "nvcc and set NVCC" : "a C11/OpenMP compiler and set CC") or add it to PATH"))
     match(r"^[a-z][a-z0-9_]*$", name) === nothing && throw(ArgumentError("invalid environment name"))
     source = realpath(source === nothing ? pufferlib_source() : source)
     managed_raylib = raylib === nothing
@@ -32,6 +31,7 @@ function build(name::AbstractString; source=get(ENV,"PUFFERLIB_SOURCE",nothing),
     entry = only(entries)
     gpu = backend isa GPU
     (gpu ? entry.gpu : entry.cpu) || throw(ArgumentError("$name has no $(gpu ? "native GPU" : "CPU") backend"))
+    Sys.which(compiler) === nothing && throw(ArgumentError("compiler '$compiler' not found; install $(gpu ? "nvcc and set NVCC" : "a C11/OpenMP compiler and set CC") or add it to PATH"))
     hdr = joinpath(source, "ocean", name, name * (gpu ? ".cu" : ".h"))
     config = joinpath(source, "config", name * ".ini")
     isfile(config) || throw(ArgumentError("missing environment config: $config"))

@@ -29,6 +29,7 @@ for path in sorted(root.glob('*-device.csv')):
         kernel_launch_api_calls=kernel_launches, graph_launch_api_calls=graph_launches,
         simulation_memory_operations=0, profiler_warmup_copy_bytes=8))
     print(stem, dict(sorted(launch.items())))
+assert summary, f'no CUPTI device traces found in {root}'
 with (root/'summary.csv').open('w',newline='') as f:
     writer = csv.DictWriter(f,fieldnames=summary[0].keys())
     writer.writeheader(); writer.writerows(summary)

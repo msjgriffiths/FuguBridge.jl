@@ -1,7 +1,7 @@
 using CUDA, FuguBridge
 CUDA.allowscalar(false)
 
-# Build first: build("breakout"; source=..., raylib=..., backend=GPU()).
+# Build first: build("breakout"; backend=GPU()).
 lib = Library(only(ARGS))
 Batch(lib, 4096) do env
     # A tiny illustrative Julia policy: choose a valid action on the GPU.

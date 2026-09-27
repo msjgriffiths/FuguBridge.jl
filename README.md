@@ -45,7 +45,8 @@ Linux is the tested GPU platform.
 
 The bundled PufferLib version has three native GPU environments: Breakout, Admiral,
 and Robot Arm. Other environments, including Tetris, run on CPU. `environments()` lists what's
-available. Some games need additional assets or libraries.
+in the source. Some games need additional assets or libraries; see the platform limits
+in the [API notes](docs/API.md).
 
 ## Performance
 
@@ -55,5 +56,5 @@ after warmup. Capturing 64 steps in a CUDA graph improved Breakout throughput by
 and Admiral by 0.37%.
 
 These are fixed-action environment benchmarks, without a model or training loop.
-See the [measurements and profiling](docs/OVERHEAD.md), [API notes](docs/API.md),
+See the [measurements and profiling](docs/BENCHMARKS.md), [API notes](docs/API.md),
 and [CUDA graph example](examples/gpu_graph.jl).

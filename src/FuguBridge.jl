@@ -108,7 +108,7 @@ function Batch(f::Function, args...; kwargs...)
     try f(env) finally close(env) end
 end
 
-"""Reset using upstream semantics (does not rewind the random-number generator)."""
+"""Reset using the environment's upstream semantics, without separately reseeding it."""
 function reset!(env::Batch)
     h = live(env)
     s = stream_pointer(backend(env.lib), env.token)

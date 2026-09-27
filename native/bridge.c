@@ -18,13 +18,13 @@
 
 typedef struct {
     Env* envs;
-    int count, agents;
+    int count;
     Ini ini; /* Some environments retain pointers into their configuration. */
 } FgBatch;
 
 static const int fg_actions[] = ACT_SIZES;
 static char fg_message[256];
-static int fg_busy; /* Upstream GPU environments have one global batch per DSO. */
+static int fg_busy; /* GPU environments, CPU Admiral and Chess keep global state. */
 static int fg_fail(const char* message) {
     snprintf(fg_message, sizeof(fg_message), "%s", message);
     return -1;
@@ -60,13 +60,24 @@ static void fg_ini_free(Ini* ini) {
     free(ini->sections);
 }
 
+#if !FG_GPU
+static void fg_envs_free(FgBatch* b) {
+    for(int i=0;i<b->count;i++) puf_close(&b->envs[i]);
+#if defined(MY_VEC_CLOSE) && defined(PUFFER_CHESS)
+    my_vec_close(b->envs); /* Global FEN cache can exist even with zero complete games. */
+#elif defined(MY_VEC_CLOSE)
+    if(b->count>0) my_vec_close(b->envs);
+#endif
+    free(b->envs);
+}
+#endif
+
 FG_EXTERN void* fg_create(int n, unsigned int seed, void* obs, float* actions,
         float* rewards, float* terminals, unsigned char* masks, const char* config) {
     if(n<=0 || n%fg_info(7,0)) { fg_fail("invalid agent count"); return NULL; }
-    if(FG_GPU && fg_busy) { fg_fail("upstream GPU backend permits only one live batch per library"); return NULL; }
+    if(fg_busy) { fg_fail("upstream backend permits only one live batch per library"); return NULL; }
     FgBatch* b = (FgBatch*)calloc(1,sizeof(FgBatch));
     if(!b) { fg_fail("batch allocation failed"); return NULL; }
-    b->agents = n;
     puf_ini_load_file(&b->ini, config);
     Dict* ek = puf_ini_section(&b->ini, "env", 1);
 #if FG_GPU
@@ -76,7 +87,6 @@ FG_EXTERN void* fg_create(int n, unsigned int seed, void* obs, float* actions,
         if(b->envs) puf_close(b->envs);
         fg_fail(cudaGetErrorString(status)); fg_ini_free(&b->ini); free(b); return NULL;
     }
-    fg_busy = 1;
 #else
 #ifdef MY_VEC_INIT
     Dict* vk = puf_ini_section(&b->ini, "vec", 1);
@@ -100,8 +110,7 @@ FG_EXTERN void* fg_create(int n, unsigned int seed, void* obs, float* actions,
     int total=0;
     for(int i=0;i<b->count;i++) total+=b->envs[i].num_agents;
     if(total!=n) {
-        for(int i=0;i<b->count;i++) puf_close(&b->envs[i]);
-        free(b->envs); fg_ini_free(&b->ini); free(b);
+        fg_envs_free(b); fg_ini_free(&b->ini); free(b);
         fg_fail("agent count must fit complete environments"); return NULL;
     }
     int k=0, mask_size=fg_info(6,0);
@@ -116,6 +125,9 @@ FG_EXTERN void* fg_create(int n, unsigned int seed, void* obs, float* actions,
             a->action_mask=masks+(size_t)k*mask_size; a->policy=0;
         }
     }
+#endif
+#if FG_GPU || defined(PUFFER_ADMIRAL) || defined(PUFFER_CHESS)
+    fg_busy = 1;
 #endif
     return b;
 }
@@ -178,11 +190,11 @@ FG_EXTERN int fg_close(void* handle) {
     if(!handle) return 0;
     FgBatch* b=(FgBatch*)handle;
 #if FG_GPU
-    puf_close(b->envs); fg_busy=0;
+    puf_close(b->envs);
 #else
-    for(int i=0;i<b->count;i++) puf_close(&b->envs[i]);
-    free(b->envs);
+    fg_envs_free(b);
 #endif
+    fg_busy=0;
     fg_ini_free(&b->ini); free(b);
     return 0;
 }

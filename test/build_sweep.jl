@@ -1,18 +1,19 @@
 using FuguBridge
-source=ENV["PUFFERLIB_SOURCE"]
-raylib=ENV["RAYLIB_ROOT"]
+source=get(() -> FuguBridge.pufferlib_source(), ENV, "PUFFERLIB_SOURCE")
+names=Set(ARGS)  # Optional subset; no arguments checks every CPU source entry.
 mkpath("runs/cpu-builds")
 open("runs/cpu-builds/results.tsv","w") do summary
     println(summary,"environment\tstatus\tlibrary")
     for e in environments(source)
         e.cpu || continue
+        isempty(names) || e.name in names || continue
         path=""
         status="failed"
         open("runs/cpu-builds/$(e.name).log","w") do log
             redirect_stdout(log) do
                 redirect_stderr(log) do
                     try
-                        path=build(e.name;source,raylib)
+                        path=build(e.name;source)
                         Library(path)
                         status="compiled"
                     catch err

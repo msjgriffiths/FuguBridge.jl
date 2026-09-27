@@ -1,6 +1,7 @@
 using CUDA, Test, FuguBridge
 include("../benchmark/bench.jl")
 CUDA.allowscalar(false)
+allocated_step(e) = @allocated step!(e)
 
 @testset "Native GPU integration" begin
     for name in ("breakout","admiral","robot_arm")
@@ -15,6 +16,9 @@ CUDA.allowscalar(false)
         @test_throws DimensionMismatch step!(env,CUDA.zeros(Float32,1,255))
         GC.gc()
         @test step!(env) === env
+        synchronize!(env)
+        allocated_step(env); synchronize!(env)
+        @test allocated_step(env) == 0
         synchronize!(env)
         @test all(isfinite,Array(env.obs))
         CUDA.stream!(CuStream()) do

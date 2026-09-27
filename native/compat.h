@@ -18,4 +18,8 @@ static int rand_r(unsigned int* seed) {
     }
     *seed=x; return (int)result;
 }
+/* CRT rand() has a 15-bit range, incompatible with the RAND_MAX above.
+   Reject environments using it rather than silently changing their simulation.
+   A "poisoned rand/srand" error means this environment needs Linux. */
+#pragma GCC poison rand srand
 #endif

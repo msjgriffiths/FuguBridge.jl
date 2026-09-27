@@ -1,6 +1,6 @@
 name = "FuguBridge"
 uuid = "810835f0-bbb0-4fa5-a78e-c36809098458"
-version = "0.1.1"
+version = "0.1.2"
 
 [deps]
 BFloat16s = "ab4f0b2a-ad5b-11e8-123f-65d77653426b"
