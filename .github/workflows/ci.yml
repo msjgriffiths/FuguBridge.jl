@@ -1,0 +1,20 @@
+name: CPU tests
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        julia: ['1.10', '1.12']
+    env:
+      FUGUBRIDGE_TEST_NATIVE: 'true'
+      OMP_NUM_THREADS: '4'
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: julia-actions/setup-julia@4c0cb0fce8556fdb04a90347310e5db8b1f98fb9 # v2
+        with:
+          version: ${{ matrix.julia }}
+      - name: Test with managed dependencies
+        run: julia --project -e 'using Pkg; Pkg.instantiate(); Pkg.test()'

@@ -1,0 +1,8 @@
+# PufferLib 5.0, pinned to the source used for validation and benchmarks.
+[pufferlib]
+git-tree-sha1 = "cb7a39a7bbefa58e867a00cedab25a779917402f"
+lazy = true
+
+    [[pufferlib.download]]
+    url = "https://codeload.github.com/PufferAI/PufferLib/tar.gz/6ffa5b10dbbbe4d1e8288367c7d9d3acd3bad4a2"
+    sha256 = "d29c8b6f8a80f0ed721f489603cdcb5f2988c4bfb60c5a3039ade415a3dfa1ff"

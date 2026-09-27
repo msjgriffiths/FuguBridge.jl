@@ -1,6 +1,7 @@
 module FuguBridge
 
-using Libdl, SHA, BFloat16s
+using Libdl, SHA, BFloat16s, LazyArtifacts, Scratch
+import Raylib_jll
 export CPU, GPU, Library, Batch, build, environments, reset!, step!, synchronize!
 
 abstract type Backend end

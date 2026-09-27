@@ -1,5 +1,9 @@
-"""Discover source entries. `gpu=true` means a native PUF_GPU source, not just a policy encoder."""
-function environments(source::AbstractString)
+pufferlib_source() = joinpath(artifact"pufferlib", "PufferLib-6ffa5b10dbbbe4d1e8288367c7d9d3acd3bad4a2")
+
+"""Discover source entries. Omit `source` to use the pinned PufferLib artifact.
+`gpu=true` means a native PUF_GPU source, not just a policy encoder.
+"""
+function environments(source::AbstractString=pufferlib_source())
     ocean = joinpath(source, "ocean")
     [begin
         h, cu = (joinpath(ocean, name, name * ext) for ext in (".h", ".cu"))
@@ -8,18 +12,21 @@ function environments(source::AbstractString)
     end for name in sort(readdir(ocean)) if isdir(joinpath(ocean, name))]
 end
 
-"""Compile one environment against an explicit PufferLib 5 source checkout.
-Requires C11 (CPU) or nvcc (GPU), and a raylib installation with include/ and lib/.
+"""Compile one environment using a pinned PufferLib source artifact and Raylib_jll.
+Requires a C11/OpenMP compiler (CPU) or nvcc (GPU). `source` and `raylib` override
+the managed dependencies with local directories.
 Extra include/link requirements can be supplied in `cflags`/`ldflags`.
 Each build gets its own directory, so rebuilding never overwrites a loaded library.
 """
-function build(name::AbstractString; source, backend::Backend=CPU(),
-               raylib=get(ENV, "RAYLIB_ROOT", ""),
-               compiler=get(ENV, backend isa GPU ? "NVCC" : "CC", backend isa GPU ? "nvcc" : "cc"),
-               cflags=String[], ldflags=String[], output=joinpath(dirname(@__DIR__), "build"))
-    isempty(raylib) && throw(ArgumentError("provide raylib=... or set RAYLIB_ROOT"))
-    source, raylib = realpath(source), realpath(raylib)
+function build(name::AbstractString; source=get(ENV,"PUFFERLIB_SOURCE",nothing), backend::Backend=CPU(),
+               raylib=get(ENV, "RAYLIB_ROOT", nothing),
+               compiler=get(ENV, backend isa GPU ? "NVCC" : "CC", backend isa GPU ? "nvcc" : Sys.iswindows() ? "gcc" : "cc"),
+               cflags=String[], ldflags=String[], output=@get_scratch!("build"))
+    Sys.which(compiler) === nothing && throw(ArgumentError("compiler '$compiler' not found; install $(backend isa GPU ? "nvcc and set NVCC" : "a C11/OpenMP compiler and set CC") or add it to PATH"))
     match(r"^[a-z][a-z0-9_]*$", name) === nothing && throw(ArgumentError("invalid environment name"))
+    source = realpath(source === nothing ? pufferlib_source() : source)
+    managed_raylib = raylib === nothing
+    raylib = realpath(managed_raylib ? Raylib_jll.artifact_dir : raylib)
     entries = filter(x -> x.name == name, environments(source))
     isempty(entries) && throw(ArgumentError("environment not found: $name"))
     entry = only(entries)
@@ -38,8 +45,9 @@ function build(name::AbstractString; source, backend::Backend=CPU(),
     write(unit, join(["#include \"" * replace(p, '\\'=>'/') * "\"" for p in (compat,hdr,shim)], "\n") * "\n")
     lib = joinpath(out, "libfugubridge." * Libdl.dlext)
     includes = ["-I" * p for p in (source, joinpath(source,"src"), dirname(hdr), joinpath(source,"vendor"), joinpath(raylib,"include"))]
-    links = Sys.iswindows() ? [joinpath(raylib,"lib","libraylib.a"), "-lopengl32", "-lgdi32", "-lwinmm"] :
-        ["-L" * joinpath(raylib,"lib"), "-lraylib", "-Wl,-rpath," * joinpath(raylib,"lib"), "-lm", "-ldl", "-lpthread"]
+    raylib_file = managed_raylib ? Raylib_jll.libraylib : joinpath(raylib,"lib", Sys.iswindows() ? "libraylib.a" : "libraylib.so")
+    links = Sys.iswindows() ? [raylib_file, "-lopengl32", "-lgdi32", "-lwinmm"] :
+        [raylib_file, "-Wl,-rpath," * dirname(raylib_file), "-lm", "-ldl", "-lpthread"]
     opts = gpu ? ["-std=c++17", "-O3", "-shared", "-Xcompiler=-fPIC,-fvisibility=hidden", "--cudart=shared"] :
         ["-std=gnu11", "-O3", "-shared", "-fopenmp", "-fvisibility=hidden"]
     !gpu && !Sys.iswindows() && push!(opts, "-fPIC")
@@ -47,7 +55,7 @@ function build(name::AbstractString; source, backend::Backend=CPU(),
     # nvcc passes host linker flags through explicitly.
     if gpu && !Sys.iswindows()
         filter!(x -> !startswith(x, "-Wl,"), links)
-        append!(links, ["-Xlinker=-rpath", "-Xlinker=" * joinpath(raylib,"lib")])
+        append!(links, ["-Xlinker=-rpath", "-Xlinker=" * dirname(raylib_file)])
     end
     cmd = Cmd([compiler; opts; includes; "-DPLATFORM_DESKTOP"; "-DPUFFER_" * uppercase(name); cflags; unit; links; ldflags; "-o"; lib])
     write(joinpath(out, "build-command.txt"), string(cmd) * "\n")

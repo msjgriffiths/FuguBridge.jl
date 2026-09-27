@@ -6,18 +6,19 @@ using Test, FuguBridge
     @test_throws ErrorException FuguBridge.allocate(GPU(), Float32, 2)
 end
 
-if haskey(ENV, "PUFFERLIB_SOURCE")
-    source = ENV["PUFFERLIB_SOURCE"]
-    raylib = ENV["RAYLIB_ROOT"]
-    compiler = get(ENV, "CC", "cc")
+if haskey(ENV, "PUFFERLIB_SOURCE") || get(ENV,"FUGUBRIDGE_TEST_NATIVE","false")=="true"
+    source = get(ENV, "PUFFERLIB_SOURCE", nothing)
+    raylib = get(ENV, "RAYLIB_ROOT", nothing)
+    compiler = get(ENV, "CC", Sys.iswindows() ? "gcc" : "cc")
     @testset "Upstream CPU integration" begin
-        catalog = environments(source)
+        catalog = source === nothing ? environments() : environments(source)
         @test only(filter(x -> x.name == "breakout", catalog)).gpu
         @test !only(filter(x -> x.name == "tetris", catalog)).gpu
         @test_throws ArgumentError build("tetris"; source, raylib, backend=GPU())
         for name in ("cartpole", "tetris", "chain_mdp", "squared_continuous", "admiral")
             lib = Library(build(name; source, raylib, compiler))
             @test lib isa Library{CPU}
+            @test startswith(lib.path, FuguBridge.get_scratch!(FuguBridge,"build") * (Sys.iswindows() ? "\\" : "/"))
             n = 8
             seed=lib.seedable ? 73 : 0
             env = Batch(lib, n; seed)
