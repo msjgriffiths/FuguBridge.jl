@@ -1,0 +1,7 @@
+Precompiling packages...
+   1231.5 ms  ✓ FuguBridge
+  1 dependency successfully precompiled in 1 seconds. 3 already precompiled.
+Test Summary: | Pass  Total  Time
+Package API   |    3      3  0.1s
+Test Summary:            | Pass  Total  Time
+Upstream CPU integration |   68     68  9.3s

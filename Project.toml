@@ -1,0 +1,25 @@
+name = "FuguBridge"
+uuid = "810835f0-bbb0-4fa5-a78e-c36809098458"
+version = "0.1.0"
+
+[deps]
+BFloat16s = "ab4f0b2a-ad5b-11e8-123f-65d77653426b"
+Libdl = "8f399da3-3557-5675-b5ff-fb832c97cbdb"
+SHA = "ea8e919c-243c-51af-8825-aaa63cd721ce"
+
+[weakdeps]
+CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba"
+
+[extensions]
+FuguBridgeCUDAExt = "CUDA"
+
+[compat]
+BFloat16s = "0.5, 0.6"
+CUDA = "5, 6"
+julia = "1.10"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test"]

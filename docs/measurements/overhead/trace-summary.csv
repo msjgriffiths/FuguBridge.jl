@@ -1,0 +1,13 @@
+trace,kernels,kernel_launch_api_calls,graph_launch_api_calls,simulation_memory_operations,profiler_warmup_copy_bytes
+admiral-graph_julia,384,0,2,0,8
+admiral-graph_native,384,0,2,0,8
+admiral-julia,384,384,0,0,8
+admiral-native,384,384,0,0,8
+breakout-graph_julia,2048,0,32,0,8
+breakout-graph_native,2048,0,32,0,8
+breakout-julia,2048,2048,0,0,8
+breakout-native,2048,2048,0,0,8
+robot_arm-graph_julia,384,0,2,0,8
+robot_arm-graph_native,384,0,2,0,8
+robot_arm-julia,384,384,0,0,8
+robot_arm-native,384,384,0,0,8
